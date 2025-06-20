@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: scampr-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - scampr-network
+
+  # Note: Since you're using MongoDB Atlas, the local mongodb service is not needed
+  # Keeping it commented out in case you want to use it for testing
+  # mongodb:
+  #   image: mongo:7.0
+  #   container_name: scampr-mongodb
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - scampr_mongodb_data:/data/db
+  #   environment:
+  #     - MONGO_INITDB_DATABASE=scampr
+  #   networks:
+  #     - scampr-network
+
+volumes:
+  scampr_mongodb_data:
+    name: scampr_mongodb_data
+
+networks:
+  scampr-network:
+    name: scampr-network
+    driver: bridge
