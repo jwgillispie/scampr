@@ -151,7 +151,7 @@ class ApiService {
       if (longitude != null) queryParams['lon'] = longitude;
       if (radius != null) queryParams['radius'] = radius;
 
-      final response = await _dio.get('/trees', queryParameters: queryParams);
+      final response = await _dio.get('/trees/', queryParameters: queryParams);
       return List<Map<String, dynamic>>.from(response.data);
     } on DioException catch (e) {
       throw _handleError(e);
@@ -180,7 +180,7 @@ class ApiService {
     List<String> features = const [],
   }) async {
     try {
-      final response = await _dio.post('/trees', data: {
+      final response = await _dio.post('/trees/', data: {
         'name': name,
         'description': description,
         'location': {
@@ -200,6 +200,56 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> createTreeWithImages({
+    required Map<String, dynamic> treeData,
+    List<String> imagePaths = const [],
+  }) async {
+    try {
+      FormData formData = FormData();
+      
+      // Add tree data
+      formData.fields.addAll([
+        MapEntry('name', treeData['name']),
+        MapEntry('description', treeData['description']),
+        MapEntry('latitude', treeData['location']['latitude'].toString()),
+        MapEntry('longitude', treeData['location']['longitude'].toString()),
+        MapEntry('difficulty', treeData['difficulty'].toString()),
+        MapEntry('tree_type', treeData['treeType']),
+        MapEntry('height', treeData['height'].toString()),
+      ]);
+      
+      // Add features as multiple fields
+      for (String feature in treeData['features'] ?? []) {
+        formData.fields.add(MapEntry('features', feature));
+      }
+      
+      // Add images
+      for (int i = 0; i < imagePaths.length; i++) {
+        formData.files.add(
+          MapEntry(
+            'images',
+            await MultipartFile.fromFile(
+              imagePaths[i],
+              filename: 'tree_image_$i.jpg',
+            ),
+          ),
+        );
+      }
+      
+      final response = await _dio.post(
+        '/trees/with-images',
+        data: formData,
+        options: Options(
+          headers: {'Content-Type': 'multipart/form-data'},
+        ),
+      );
+      
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // Review endpoints
   Future<Map<String, dynamic>> createReview({
     required String treeId,
@@ -207,7 +257,7 @@ class ApiService {
     required String comment,
   }) async {
     try {
-      final response = await _dio.post('/reviews', data: {
+      final response = await _dio.post('/reviews/', data: {
         'tree_id': treeId,
         'rating': rating,
         'comment': comment,

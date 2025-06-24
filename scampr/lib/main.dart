@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/add_tree/add_tree_screen.dart';
+import 'screens/map_picker/map_picker_screen.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/database_service.dart';
@@ -217,6 +219,21 @@ class ScamprAppWithRouter extends StatelessWidget {
           path: '/home',
           name: 'home',
           builder: (context, state) => const HomeScreen(),
+        ),
+        GoRoute(
+          path: '/add-tree',
+          name: 'add-tree',
+          builder: (context, state) => const AddTreeScreen(),
+        ),
+        GoRoute(
+          path: '/map-picker',
+          name: 'map-picker',
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            return MapPickerScreen(
+              initialLocation: extra?['initialLocation'],
+            );
+          },
         ),
       ],
       redirect: (context, state) {
