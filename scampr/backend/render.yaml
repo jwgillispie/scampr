@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: scampr-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        value: "https://scampr.web.app,https://scampr.firebaseapp.com"
+      - key: MONGODB_URL
+        fromDatabase:
+          name: scampr-db
+          property: connectionString
+    buildCommand: echo "Building with Docker"
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4
+
+databases:
+  - name: scampr-db
+    databaseName: scampr
+    plan: free

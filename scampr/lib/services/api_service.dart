@@ -5,7 +5,7 @@ class ApiService {
   // Use environment variable or fallback to localhost for development
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8000/api/v1',
+    defaultValue: 'https://scampr-backend.onrender.com/api/v1',
   );
   late final Dio _dio;
   String? _authToken;
@@ -152,6 +152,46 @@ class ApiService {
       if (radius != null) queryParams['radius'] = radius;
 
       final response = await _dio.get('/trees/', queryParameters: queryParams);
+      return List<Map<String, dynamic>>.from(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchTrees({
+    String? query,
+    double? latitude,
+    double? longitude,
+    double? radius,
+    String? treeType,
+    double? difficultyMin,
+    double? difficultyMax,
+    double? preferredDifficulty,
+    List<String>? features,
+    String sortBy = 'relevance',
+    int limit = 20,
+    int skip = 0,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'limit': limit,
+        'skip': skip,
+        'sort_by': sortBy,
+      };
+
+      if (query != null && query.isNotEmpty) queryParams['query'] = query;
+      if (latitude != null) queryParams['lat'] = latitude;
+      if (longitude != null) queryParams['lon'] = longitude;
+      if (radius != null) queryParams['radius'] = radius;
+      if (treeType != null && treeType.isNotEmpty) queryParams['tree_type'] = treeType;
+      if (difficultyMin != null) queryParams['difficulty_min'] = difficultyMin;
+      if (difficultyMax != null) queryParams['difficulty_max'] = difficultyMax;
+      if (preferredDifficulty != null) queryParams['preferred_difficulty'] = preferredDifficulty;
+      if (features != null && features.isNotEmpty) {
+        queryParams['features'] = features.join(',');
+      }
+
+      final response = await _dio.get('/trees/search', queryParameters: queryParams);
       return List<Map<String, dynamic>>.from(response.data);
     } on DioException catch (e) {
       throw _handleError(e);

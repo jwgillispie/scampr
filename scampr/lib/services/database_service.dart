@@ -69,17 +69,33 @@ class DatabaseService {
     }
   }
 
-  Future<List<Tree>> searchTrees(String query) async {
+  Future<List<Tree>> searchTrees(String query, {
+    LatLng? userLocation,
+    double? radius,
+    String? treeType,
+    double? difficultyMin,
+    double? difficultyMax,
+    double? preferredDifficulty,
+    List<String>? features,
+    String sortBy = 'relevance',
+    int limit = 20,
+  }) async {
     try {
-      // For now, get all trees and filter client-side
-      // Could be optimized with a backend search endpoint
-      final treesData = await _apiService.getTrees();
-      final trees = treesData.map((treeData) => Tree.fromMap(treeData, treeData['id'])).toList();
+      final treesData = await _apiService.searchTrees(
+        query: query.isNotEmpty ? query : null,
+        latitude: userLocation?.latitude,
+        longitude: userLocation?.longitude,
+        radius: radius,
+        treeType: treeType,
+        difficultyMin: difficultyMin,
+        difficultyMax: difficultyMax,
+        preferredDifficulty: preferredDifficulty,
+        features: features,
+        sortBy: sortBy,
+        limit: limit,
+      );
       
-      return trees.where((tree) => 
-        tree.name.toLowerCase().contains(query.toLowerCase()) ||
-        tree.description.toLowerCase().contains(query.toLowerCase())
-      ).toList();
+      return treesData.map((treeData) => Tree.fromMap(treeData, treeData['id'])).toList();
     } catch (e) {
       throw Exception('Failed to search trees: ${e.toString()}');
     }

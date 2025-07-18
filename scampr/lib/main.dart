@@ -13,11 +13,19 @@ import 'services/api_service.dart';
 import 'services/database_service.dart';
 import 'services/location_service.dart';
 import 'services/storage_service.dart';
+import 'services/nature_audio_service.dart';
 import 'blocs/auth/auth_bloc.dart';
 import 'blocs/auth/auth_event.dart';
 import 'blocs/auth/auth_state.dart';
+import 'theme/nature_theme.dart';
+import 'widgets/nature_effects.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize nature audio service
+  await NatureAudioService().initialize();
+  
   runApp(const ScamprApp());
 }
 
@@ -26,27 +34,16 @@ class ScamprApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Scampr',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E7D32), // Forest green
-          primary: const Color(0xFF2E7D32),
-          secondary: const Color(0xFF8D6E63), // Brown
-        ),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF2E7D32),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Color(0xFF2E7D32),
-          foregroundColor: Colors.white,
-        ),
+    return NatureGradientBackground(
+      gradient: NatureTheme.forestGradient,
+      child: MaterialApp(
+        title: 'Scampr - Nature\'s Calling',
+        debugShowCheckedModeBanner: false,
+        theme: NatureTheme.lightTheme,
+        darkTheme: NatureTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        home: const FirebaseInitWrapper(),
       ),
-      home: const FirebaseInitWrapper(),
     );
   }
 }
@@ -163,6 +160,11 @@ class AppWithProviders extends StatelessWidget {
           create: (_) => StorageService(),
         ),
         
+        // Nature audio service - no dependencies
+        Provider<NatureAudioService>(
+          create: (_) => NatureAudioService(),
+        ),
+        
         // Auth service - depends on ApiService
         Provider<AuthService>(
           create: (context) => AuthService(
@@ -262,27 +264,16 @@ class ScamprAppWithRouter extends StatelessWidget {
       },
     );
 
-    return MaterialApp.router(
-      title: 'Scampr',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E7D32), // Forest green
-          primary: const Color(0xFF2E7D32),
-          secondary: const Color(0xFF8D6E63), // Brown
-        ),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF2E7D32),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Color(0xFF2E7D32),
-          foregroundColor: Colors.white,
-        ),
+    return NatureGradientBackground(
+      gradient: NatureTheme.forestGradient,
+      child: MaterialApp.router(
+        title: 'Scampr - Nature\'s Calling',
+        debugShowCheckedModeBanner: false,
+        theme: NatureTheme.lightTheme,
+        darkTheme: NatureTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        routerConfig: router,
       ),
-      routerConfig: router,
     );
   }
 }
