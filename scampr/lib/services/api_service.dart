@@ -5,31 +5,45 @@ class ApiService {
   // Use environment variable or fallback to localhost for development
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://scampr-backend.onrender.com/api/v1',
+    defaultValue: 'https://scampr.onrender.com/api/v1',
   );
   late final Dio _dio;
   String? _authToken;
 
   ApiService() {
+    print('🚀 API Service initialized with baseUrl: $baseUrl');
+    
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
       headers: {
         'Content-Type': 'application/json',
       },
     ));
 
-    // Add interceptor for authentication
+    // Add interceptor for authentication and debugging
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
+        print('🌐 Making request to: ${options.uri}');
+        print('📤 Request method: ${options.method}');
+        print('📦 Request data: ${options.data}');
+        
         if (_authToken != null) {
           options.headers['Authorization'] = 'Bearer $_authToken';
+          print('🔑 Auth token added to request');
         }
         handler.next(options);
       },
+      onResponse: (response, handler) {
+        print('✅ Response received: ${response.statusCode}');
+        print('📥 Response data: ${response.data}');
+        handler.next(response);
+      },
       onError: (error, handler) {
-        print('API Error: ${error.response?.data}');
+        print('❌ API Error: ${error.response?.statusCode}');
+        print('❌ Error message: ${error.response?.data}');
+        print('❌ Error details: ${error.message}');
         handler.next(error);
       },
     ));
@@ -327,6 +341,44 @@ class ApiService {
   }
 
   bool get isAuthenticated => _authToken != null;
+
+  // Test backend connection
+  Future<Map<String, dynamic>> testConnection() async {
+    try {
+      print('🧪 Testing backend connection...');
+      // Create a separate dio instance for health check without the /api/v1 prefix
+      final healthDio = Dio(BaseOptions(
+        baseUrl: 'https://scampr.onrender.com',
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+      ));
+      final response = await healthDio.get('/health');
+      print('✅ Backend connection successful!');
+      return response.data;
+    } on DioException catch (e) {
+      print('❌ Backend connection failed: ${e.message}');
+      throw _handleError(e);
+    }
+  }
+
+  // Test API endpoints
+  Future<Map<String, dynamic>> testAPI() async {
+    try {
+      print('🧪 Testing API endpoints...');
+      // Create a separate dio instance for root endpoint
+      final apiDio = Dio(BaseOptions(
+        baseUrl: 'https://scampr.onrender.com',
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+      ));
+      final response = await apiDio.get('/');
+      print('✅ API test successful!');
+      return response.data;
+    } on DioException catch (e) {
+      print('❌ API test failed: ${e.message}');
+      throw _handleError(e);
+    }
+  }
 
   String _handleError(DioException e) {
     if (e.response != null) {

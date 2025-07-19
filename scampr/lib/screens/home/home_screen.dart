@@ -26,9 +26,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  final GlobalKey<_MapViewState> _mapViewKey = GlobalKey<_MapViewState>();
 
-  final List<Widget> _pages = [
-    const MapView(),
+  late final List<Widget> _pages = [
+    MapView(key: _mapViewKey),
     const SearchView(),
     const ProfileView(),
   ];
@@ -198,7 +199,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         await audioService.playUISound('button_tap');
                         await audioService.playHapticFeedback(HapticFeedbackType.medium);
                         if (context.mounted) {
-                          context.push('/add-tree');
+                          final result = await context.push('/add-tree');
+                          // Refresh trees if a tree was added
+                          if (result == true) {
+                            _mapViewKey.currentState?._refreshTrees();
+                          }
                         }
                       },
                       backgroundColor: Colors.transparent,
@@ -322,6 +327,12 @@ class _MapViewState extends State<MapView> {
         );
       }
     }
+  }
+
+  // Public method to refresh trees from parent widget
+  Future<void> _refreshTrees() async {
+    await _loadTrees();
+    setState(() {});
   }
 
   void _createMarkers() {
@@ -516,7 +527,7 @@ class _MapViewState extends State<MapView> {
                           onPressed: () async {
                             await audioService.playUISound('button_tap');
                             await audioService.playHapticFeedback(HapticFeedbackType.light);
-                            Navigator.pop(context);
+                            if (mounted) Navigator.pop(context);
                           },
                           icon: const Icon(Icons.close, color: Colors.white, size: 28),
                         ),
@@ -712,6 +723,73 @@ class _MapViewState extends State<MapView> {
     );
   }
 
+  Future<void> _testBackendConnection() async {
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🧪 Testing backend connection...'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+
+      // Test the connection
+      final healthCheck = await _apiService.testConnection();
+      final apiCheck = await _apiService.testAPI();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Backend connected! Health: ${healthCheck['status']}, API: ${apiCheck['message']}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+
+      // Test getting trees
+      try {
+        final trees = await _apiService.getTrees(limit: 5);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('🌲 Found ${trees.length} trees in database!'),
+              backgroundColor: Colors.blue,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('⚠️ Trees endpoint: $e'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Backend connection failed: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  void _zoomIn() {
+    _mapController.move(_mapController.center, _mapController.zoom + 1);
+  }
+
+  void _zoomOut() {
+    _mapController.move(_mapController.center, _mapController.zoom - 1);
+  }
+
   void _centerOnUserLocation() async {
     try {
       if (_currentPosition != null) {
@@ -782,6 +860,32 @@ class _MapViewState extends State<MapView> {
             ),
           ),
           actions: [
+            // Test Backend Connection Button (Debug)
+            TreeGrowthAnimation(
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.5),
+                    width: 1,
+                  ),
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.bug_report,
+                    color: Colors.orange,
+                    size: 22,
+                  ),
+                  onPressed: () async {
+                    await audioService.playUISound('button_tap');
+                    await audioService.playHapticFeedback(HapticFeedbackType.light);
+                    await _testBackendConnection();
+                  },
+                ),
+              ),
+            ),
             TreeGrowthAnimation(
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
@@ -886,42 +990,168 @@ class _MapViewState extends State<MapView> {
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
                     ),
-                    child: FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        center: _currentPosition != null
-                            ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-                            : _defaultLocation,
-                        zoom: 13.0,
-                        onMapReady: () {
-                          debugPrint('FlutterMap created successfully');
-                          debugPrint('Initial camera position: ${_currentPosition != null ? '${_currentPosition!.latitude}, ${_currentPosition!.longitude}' : 'Default SF location'}');
-                          debugPrint('Number of markers: ${_markers.length}');
-                          
-                          // Center map on user location if available
-                          if (_currentPosition != null) {
-                            _mapController.move(
-                              LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-                              15.0,
-                            );
-                          }
-                        },
-                        onTap: (tapPosition, point) async {
-                          await audioService.playUISound('pop');
-                          await audioService.playHapticFeedback(HapticFeedbackType.light);
-                          debugPrint('Map tapped at: ${point.latitude}, ${point.longitude}');
-                        },
-                        onPositionChanged: (position, hasGesture) {
-                          debugPrint('Camera moved to: ${position.center!.latitude}, ${position.center!.longitude}');
-                        },
-                      ),
+                    child: Stack(
                       children: [
-                        TileLayer(
-                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.example.scampr',
+                        FlutterMap(
+                          mapController: _mapController,
+                          options: MapOptions(
+                            center: _currentPosition != null
+                                ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                                : _defaultLocation,
+                            zoom: 13.0,
+                            minZoom: 3.0,
+                            maxZoom: 18.0,
+                            onMapReady: () {
+                              debugPrint('FlutterMap created successfully');
+                              debugPrint('Initial camera position: ${_currentPosition != null ? '${_currentPosition!.latitude}, ${_currentPosition!.longitude}' : 'Default SF location'}');
+                              debugPrint('Number of markers: ${_markers.length}');
+                              
+                              // Center map on user location if available
+                              if (_currentPosition != null) {
+                                _mapController.move(
+                                  LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                                  15.0,
+                                );
+                              }
+                            },
+                            onTap: (tapPosition, point) async {
+                              await audioService.playUISound('pop');
+                              await audioService.playHapticFeedback(HapticFeedbackType.light);
+                              debugPrint('Map tapped at: ${point.latitude}, ${point.longitude}');
+                            },
+                            onPositionChanged: (position, hasGesture) {
+                              debugPrint('Camera moved to: ${position.center!.latitude}, ${position.center!.longitude}');
+                            },
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              userAgentPackageName: 'com.example.scampr',
+                            ),
+                            MarkerLayer(
+                              markers: _markers,
+                            ),
+                          ],
                         ),
-                        MarkerLayer(
-                          markers: _markers,
+                        // Modern Zoom Controls
+                        Positioned(
+                          right: 16,
+                          top: 80,
+                          child: Column(
+                            children: [
+                              // Zoom In Button
+                              TreeGrowthAnimation(
+                                duration: const Duration(milliseconds: 300),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Colors.white.withValues(alpha: 0.9),
+                                        Colors.white.withValues(alpha: 0.8),
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.1),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                      BoxShadow(
+                                        color: NatureTheme.forestGreen.withValues(alpha: 0.1),
+                                        blurRadius: 30,
+                                        offset: const Offset(0, 20),
+                                      ),
+                                    ],
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(16),
+                                      onTap: () async {
+                                        await audioService.playUISound('button_tap');
+                                        await audioService.playHapticFeedback(HapticFeedbackType.light);
+                                        _zoomIn();
+                                      },
+                                      child: Container(
+                                        width: 56,
+                                        height: 56,
+                                        padding: const EdgeInsets.all(16),
+                                        child: const PulsatingIcon(
+                                          icon: Icons.add_rounded,
+                                          color: NatureTheme.forestGreen,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              // Zoom Out Button
+                              TreeGrowthAnimation(
+                                duration: const Duration(milliseconds: 400),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Colors.white.withValues(alpha: 0.9),
+                                        Colors.white.withValues(alpha: 0.8),
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.1),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                      BoxShadow(
+                                        color: NatureTheme.forestGreen.withValues(alpha: 0.1),
+                                        blurRadius: 30,
+                                        offset: const Offset(0, 20),
+                                      ),
+                                    ],
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(16),
+                                      onTap: () async {
+                                        await audioService.playUISound('button_tap');
+                                        await audioService.playHapticFeedback(HapticFeedbackType.light);
+                                        _zoomOut();
+                                      },
+                                      child: Container(
+                                        width: 56,
+                                        height: 56,
+                                        padding: const EdgeInsets.all(16),
+                                        child: const PulsatingIcon(
+                                          icon: Icons.remove_rounded,
+                                          color: NatureTheme.forestGreen,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -1127,7 +1357,7 @@ class _SearchViewState extends State<SearchView> {
                           onPressed: () async {
                             await audioService.playUISound('button_tap');
                             await audioService.playHapticFeedback(HapticFeedbackType.light);
-                            Navigator.pop(context);
+                            if (mounted) Navigator.pop(context);
                           },
                           icon: const Icon(Icons.close, color: Colors.white, size: 28),
                         ),
