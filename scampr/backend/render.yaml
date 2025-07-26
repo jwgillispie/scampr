@@ -11,7 +11,7 @@ services:
       - key: PORT
         value: 8000
       - key: CORS_ORIGINS
-        value: "https://scampr.web.app,https://scampr.firebaseapp.com"
+        value: "https://scampr-trees.web.app,https://scampr.web.app,https://scampr.firebaseapp.com"
       - key: MONGODB_URL
         fromDatabase:
           name: scampr-db

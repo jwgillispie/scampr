@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     API_URL: str = os.environ.get("API_URL", "http://localhost:8000")
     
     # CORS Settings
-    CORS_ORIGINS: str = "*"
+    CORS_ORIGINS: str = os.environ.get("CORS_ORIGINS", "https://scampr-trees.web.app,http://localhost:3000")
     
     # Database Settings
     MONGODB_URL: str = os.environ.get("MONGODB_URL", "mongodb://localhost:27017")
