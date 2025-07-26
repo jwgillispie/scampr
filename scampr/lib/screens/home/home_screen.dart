@@ -723,64 +723,6 @@ class _MapViewState extends State<MapView> {
     );
   }
 
-  Future<void> _testBackendConnection() async {
-    try {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🧪 Testing backend connection...'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-
-      // Test the connection
-      final healthCheck = await _apiService.testConnection();
-      final apiCheck = await _apiService.testAPI();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ Backend connected! Health: ${healthCheck['status']}, API: ${apiCheck['message']}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-
-      // Test getting trees
-      try {
-        final trees = await _apiService.getTrees(limit: 5);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('🌲 Found ${trees.length} trees in database!'),
-              backgroundColor: Colors.blue,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('⚠️ Trees endpoint: $e'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Backend connection failed: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
-  }
 
   void _zoomIn() {
     _mapController.move(_mapController.center, _mapController.zoom + 1);
@@ -860,32 +802,6 @@ class _MapViewState extends State<MapView> {
             ),
           ),
           actions: [
-            // Test Backend Connection Button (Debug)
-            TreeGrowthAnimation(
-              child: Container(
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.orange.withValues(alpha: 0.5),
-                    width: 1,
-                  ),
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.bug_report,
-                    color: Colors.orange,
-                    size: 22,
-                  ),
-                  onPressed: () async {
-                    await audioService.playUISound('button_tap');
-                    await audioService.playHapticFeedback(HapticFeedbackType.light);
-                    await _testBackendConnection();
-                  },
-                ),
-              ),
-            ),
             TreeGrowthAnimation(
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
